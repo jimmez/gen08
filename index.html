@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Prompt Generator</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background: black;
+      color: white;
+      font-family: Arial, sans-serif;
+    }
+
+    #clickArea {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 20px;
+      cursor: pointer;
+    }
+
+    .intro {
+      color: #66ccff;
+      font-style: italic;
+      font-size: 4vw;
+      margin-bottom: 20px;
+    }
+
+    #output {
+      font-size: 6vw;
+      font-weight: bold;
+      word-wrap: break-word;
+      margin-top: 20px;
+    }
+
+    #soundButton {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      font-size: 18px;
+      background: #222;
+      border: 1px solid #555;
+      border-radius: 10px;
+      color: white;
+      padding: 5px 10px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    #controls {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 6px;
+      font-size: 14px;
+    }
+
+    label {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    input[type="checkbox"] {
+      transform: scale(1.2);
+    }
+
+    input[type="number"] {
+      width: 50px;
+      font-size: 14px;
+      text-align: center;
+      padding: 2px;
+    }
+
+    @media (min-width: 768px) {
+      .intro, #output {
+        font-size: 28px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="clickArea">
+    <div class="intro">Tap, press any key, or wait for auto-play to generate a prompt</div>
+    <div id="output">Your prompt will appear here.</div>
+  </div>
+
+  <div id="soundButton" onclick="toggleSound()">🔊 Sound: ON</div>
+
+  <div id="controls">
+    <label><input type="checkbox" id="autoToggle"> 🔁 Auto-play</label>
+    <label>Min (s): <input type="number" id="minSeconds" value="5" min="1"></label>
+    <label>Max (s): <input type="number" id="maxSeconds" value="10" min="1"></label>
+  </div>
+
+  <script>
+    const prompts = `
+philosophy 
+movie quote
+a tilt 
+color
+new location
+move body 
+breathe
+find a rhythm 
+voume change
+tempo change
+emotion in the story 
+vibe
+paraphrase 
+secret 
+make the theme explicit
+mime 
+repeat 
+meisner 
+meanwhile
+social justification
+familiar justification 
+the objectives
+hashtag
+`.trim().split('\n');
+
+    let soundOn = true;
+    let autoPlay = false;
+    let timer = null;
+
+    const output = document.getElementById('output');
+    const soundButton = document.getElementById('soundButton');
+    const autoToggle = document.getElementById('autoToggle');
+    const minInput = document.getElementById('minSeconds');
+    const maxInput = document.getElementById('maxSeconds');
+    const clickArea = document.getElementById('clickArea');
+
+    function getRandomPrompt() {
+      return prompts[Math.floor(Math.random() * prompts.length)];
+    }
+
+    function generatePrompt() {
+      const prompt = getRandomPrompt();
+      output.textContent = prompt;
+      if (soundOn) speak(prompt);
+    }
+
+    function speak(text) {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'en-US';
+      const voices = window.speechSynthesis.getVoices();
+      const preferred = voices.find(v =>
+        v.name.includes("Samantha") || v.name.includes("Alexa") || v.name.includes("Google US English")
+      );
+      if (preferred) utterance.voice = preferred;
+      speechSynthesis.cancel();
+      speechSynthesis.speak(utterance);
+    }
+
+    function toggleSound() {
+      soundOn = !soundOn;
+      soundButton.textContent = soundOn ? "🔊 Sound: ON" : "🔇 Sound: OFF";
+      speechSynthesis.cancel();
+    }
+
+    function startAutoPlay() {
+      stopAutoPlay();
+      const min = parseInt(minInput.value, 10) * 1000;
+      const max = parseInt(maxInput.value, 10) * 1000;
+      const delay = Math.floor(Math.random() * (max - min + 1)) + min;
+      timer = setTimeout(() => {
+        generatePrompt();
+        if (autoPlay) startAutoPlay();
+      }, delay);
+    }
+
+    function stopAutoPlay() {
+      clearTimeout(timer);
+    }
+
+    autoToggle.addEventListener('change', () => {
+      autoPlay = autoToggle.checked;
+      if (autoPlay) startAutoPlay();
+      else stopAutoPlay();
+    });
+
+    clickArea.addEventListener('click', generatePrompt);
+    window.addEventListener('keydown', generatePrompt);
+
+    // Swipe to toggle sound
+    let touchStartX = null;
+    clickArea.addEventListener('touchstart', function(e) {
+      touchStartX = e.changedTouches[0].screenX;
+    });
+    clickArea.addEventListener('touchend', function(e) {
+      if (touchStartX === null) return;
+      const deltaX = e.changedTouches[0].screenX - touchStartX;
+      if (Math.abs(deltaX) > 50) toggleSound();
+      touchStartX = null;
+    });
+
+    window.speechSynthesis.onvoiceschanged = () => {};
+  </script>
+
+</body>
+</html>
